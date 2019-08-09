@@ -7,8 +7,6 @@ session = boto3.Session(profile_name='automation')
 s3 = session.resource('s3')
 client = boto3.client('s3')
 
-#test2
-
 #######################################################################################################
 def bucket_give_public_access(name,region):
     """Give s3 bucket pubic access"""
