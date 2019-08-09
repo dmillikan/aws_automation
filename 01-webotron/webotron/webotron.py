@@ -9,7 +9,7 @@ client = boto3.client('s3')
 
 
 #######################################################################################################
-def bucket_give_public_access(name):
+def bucket_give_public_access(name,region):
     """Give s3 bucket pubic access"""
     b = s3.Bucket(name)
     pol = b.Policy()
@@ -26,10 +26,10 @@ def bucket_give_public_access(name):
   ]
 }""" % name
     pol.put(Policy=polstr)
-    bucket_make_website(name)
+    bucket_make_website(name,region)
     return
 #######################################################################################################
-def bucket_make_website(name):
+def bucket_make_website(name,region):
     """Give s3 bucket pubic access"""
     b = s3.Bucket(name)
     ws = b.Website()
@@ -40,7 +40,7 @@ def bucket_make_website(name):
         'IndexDocument': {
             'Suffix': 'index.html'
         }})
-    url = "http://{0}.s3-website-{1}.amazonaws.com".format(name , session.region_name)
+    url = "http://{0}.s3-website-{1}.amazonaws.com".format(name , region)
     print(url)
     return
 #######################################################################################################
@@ -75,27 +75,29 @@ def list_buckets(region):
 @click.option("--public", "public", default=False, is_flag=True, help ='Make Bucket Public')
 def create_bucket(name,public,region):
     """Create new s3 bucket"""
-    b = s3.Bucket(name)
-    pol = s3.BucketPolicy(name)
+    b = None
+
     try:
         if region.lower() != 'us-east-1':
-            br = b.create(CreateBucketConfiguration={"LocationConstraint":region})
+            b = s3.create_bucket(
+                Bucket = name,
+                CreateBucketConfiguration={"LocationConstraint":region}
+            )
         else:
-            br = b.create()
+            b = s3.create_bucket(Bucket = name)
 
-    #    print('\n \t \tBucket {0} created successfully in region {1}\n'.format(name,region))
-        print(br)
-
-        if public:
-            bucket_give_public_access(name)
+        print('\n \tBucket {0} created successfully in region {1}\n'.format(name,region))
 
     except ClientError as e:
-    #    if e.response['Error']['Code'] == "InvalidLocationConstraint":
-    #        pass
-    #    if e.response['Error']['Code'] == "BucketAlreadyOwnedByYou":
-    #        print('\n \t \tBucket {0} already created in region {1}\n'.format(name,region))
-    #    else:
-        print(e.response['Error']['Code'])
+        if e.response['Error']['Code'] == "BucketAlreadyOwnedByYou":
+            print('\n \tBucket {0} already created in region {1}\n'.format(name,region))
+            pass
+        else:
+            raise e
+
+    if public:
+        bucket_give_public_access(name,region)
+
     return
 #######################################################################################################
 @buckets.group("objects")
