@@ -2,6 +2,8 @@ import boto3
 import click
 import botocore
 from botocore.exceptions import ClientError
+from pathlib import Path
+import mimetypes
 
 session = boto3.Session(profile_name='automation')
 s3 = session.resource('s3')
@@ -43,6 +45,27 @@ def bucket_make_website(name,region):
     print(url)
     return
 #######################################################################################################
+def get_local_path(path,root,bucket_name=None):
+    for p in path.iterdir():
+        if p.is_dir() : get_local_path(p,root,bucket_name)
+        if p.is_file() : 
+            if not bucket_name: 
+                print('File {0} has a key of {1}'.format(p,p.relative_to(root)))
+            else : 
+                print('Uploading {0} with key {1} to {2}'.format(p,p.relative_to(root),s3.Bucket(bucket_name)))
+                upload_file(s3.Bucket(bucket_name),str(p),str(p.relative_to(root)))
+        #if p.is_file() :
+    return
+#######################################################################################################
+def upload_file(s3_bucket,path,key):
+    content_type = mimetypes.guess_type(key)[0] or 'text/plain'
+    s3_bucket.upload_file(
+        path,
+        key,
+        ExtraArgs={'ContentType':content_type}
+    )
+    return   
+#######################################################################################################
 #######################################################################################################
 #######################################################################################################
 @click.group()
@@ -53,20 +76,16 @@ def cli():
 def buckets():
     """Commands for Buckets"""
 #######################################################################################################
-@buckets.command("list")
-@click.option("--region", "region", default=None, help ='Bucket Region')
-def list_buckets(region):
-    """List all s3 buckets"""
-    if not region:
-    #    print('\n \n \n \n \t \t \t \t here\n \n \n ')
-        for b in s3.buckets.all():
-            print(b.name)
-    else:
-        print('Showing buckets in region {0} \n \n'.format(region))
-        for b in s3.buckets.filter(Filter=[{'name':'LocationConstraint','value':region}]):
-            print('\t {0} is in {1}'.format(b.name,client.get_bucket_location(Bucket=b.name)['LocationConstraint'] or 'us-east-1' ))
-
+@buckets.command("sync")
+@click.argument("pathname",type=click.Path(exists=True))
+@click.option("--bucket", "bucket", default=None)
+def sync_path(pathname,bucket):
+    """Synchronize Local Path to S3 Bucket"""
+    path = Path(pathname).expanduser().resolve()
+    get_local_path(path,path,bucket)
+    
     return
+
 #######################################################################################################
 @buckets.command("create")
 @click.argument("name")
