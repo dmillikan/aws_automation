@@ -74,16 +74,15 @@ def list_buckets(region):
 @click.option("--public", "public", default=False, is_flag=True, help ='Make Bucket Public')
 def create_bucket(name,public,region):
     """Create new s3 bucket"""
-    b = None
 
     try:
         if region.lower() != 'us-east-1':
-            b = s3.create_bucket(
+            s3.create_bucket(
                 Bucket = name,
                 CreateBucketConfiguration={"LocationConstraint":region}
             )
         else:
-            b = s3.create_bucket(Bucket = name)
+            s3.create_bucket(Bucket = name)
 
         print('\n \tBucket {0} created successfully in region {1}\n'.format(name,region))
 
