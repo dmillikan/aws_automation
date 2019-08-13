@@ -1,9 +1,21 @@
-import boto3
-import click
-import botocore
-from botocore.exceptions import ClientError
-from pathlib import Path
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+"""Deploy Websites with AWS 
+
+    Webotron automates the process of deploying static websites to AWS S3
+    - Configure S3
+        - Create them
+        - Set them up for static website hosting
+        - Deploy local files to them
+"""
+
 import mimetypes
+from pathlib import Path
+
+import boto3
+import botocore
+import click
+from botocore.exceptions import ClientError
 
 session = boto3.Session(profile_name='automation')
 s3 = session.resource('s3')
