@@ -33,9 +33,9 @@ def buckets():
     """Commands for Buckets"""
 #######################################################################################################
 @buckets.command("sync")
-@click.argument("pathname",type=click.Path(exists=True))
+@click.argument("pathname", type=click.Path(exists=True))
 @click.option("--bucket", "bucket_name", default=None)
-def sync_path(pathname,bucket_name):
+def sync_path(pathname, bucket_name):
     """Synchronize Local Path to S3 Bucket"""
     bucket_manager.sync_path(pathname, bucket_name)
 
@@ -47,23 +47,23 @@ def list_buckets():
 
     for b in bucket_manager.all_buckets():
         print(b.name)
-  
+
     return
 
 #######################################################################################################
 @buckets.command("create")
 @click.argument("name")
-@click.option("--region", "region", default='us-east-1', help ='Bucket Region')
-@click.option("--public", "public", default=False, is_flag=True, help ='Make Bucket Public')
+@click.option("--region", "region", default='us-east-1', help='Bucket Region')
+@click.option("--public", "public", default=False, is_flag=True, help='Make Bucket Public')
 @click.option("--website", "website", default=False, is_flag=True, help='Host Static Website from Bucket')
-def create_bucket(name,public,region,website):
+def create_bucket(name, public, region, website):
     """Create new s3 bucket"""
 
-    s3_bucket = bucket_manager.init_bucket(name,region)
+    s3_bucket = bucket_manager.init_bucket(name, region)
 
     if website:
         public = True
-        bucket_manager.host_website(s3_bucket,region)
+        bucket_manager.host_website(s3_bucket, region)
 
     if public:
         bucket_manager.give_public_access(s3_bucket)
@@ -85,6 +85,7 @@ def list_bucket_objects(bucket):
 #######################################################################################################
 #######################################################################################################
 #######################################################################################################
+
 
 if __name__ == '__main__':
     try:
