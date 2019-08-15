@@ -5,6 +5,8 @@ verify_ssl = true
 
 [dev-packages]
 pylint = "*"
+picodestyle = "*"
+autopep8 = "*"
 
 [packages]
 boto3 = "*"
