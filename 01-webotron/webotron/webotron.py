@@ -16,17 +16,29 @@ from botocore.exceptions import ClientError
 
 from bucket import BucketManager
 
-session = boto3.Session(profile_name='automation')
-bucket_manager = BucketManager(session)
-
-client = boto3.client('s3')
+session = None
+bucket_manager = None
+client = None
 
 #######################################################################################################
 #######################################################################################################
 #######################################################################################################
 @click.group()
-def cli():
+@click.option('--profile', default=None, help="Use a given AWS profile")
+def cli(profile):
     """Webotron Synchronizes Local Directories with S3"""
+    global session, bucket_manager, client
+    session_cfg = {}
+    
+
+    if profile:
+        session_cfg['profile_name'] = profile
+
+    session = boto3.Session(**session_cfg)
+    bucket_manager = BucketManager(session)
+
+    client = boto3.client('s3')
+
 #######################################################################################################
 @cli.group("buckets")
 def buckets():
@@ -34,10 +46,10 @@ def buckets():
 #######################################################################################################
 @buckets.command("sync")
 @click.argument("pathname", type=click.Path(exists=True))
-@click.option("--bucket", "bucket_name", default=None)
-def sync_path(pathname, bucket_name):
+@click.argument("bucketname")
+def sync_path(pathname, bucketname):
     """Synchronize Local Path to S3 Bucket"""
-    bucket_manager.sync_path(pathname, bucket_name)
+    bucket_manager.sync_path(pathname, bucketname)
 
     return
 #######################################################################################################

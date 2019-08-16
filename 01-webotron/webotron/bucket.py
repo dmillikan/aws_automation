@@ -26,14 +26,16 @@ class BucketManager:
     def init_bucket(self, bucket_name, region=None):
         """Initialzie S3 Bucket"""
 
+        s3_bucket = self.s3.Bucket(bucket_name)
         try:
-            if region and region.lower() != 'us-east-1':
-                s3_bucket = self.s3.create_bucket(
-                    Bucket=bucket_name,
-                    CreateBucketConfiguration={"LocationConstraint": region}
-                )
-            else:
-                s3_bucket = self.s3.create_bucket(Bucket=bucket_name)
+            if not self.s3.Bucket(bucket_name):
+                if region and region.lower() != 'us-east-1':
+                    s3_bucket = self.s3.create_bucket(
+                        Bucket=bucket_name,
+                        CreateBucketConfiguration={"LocationConstraint": region}
+                    )
+                else:
+                    s3_bucket = self.s3.create_bucket(Bucket=bucket_name)
 
         except ClientError as e:
             if e.response['Error']['Code'] == "BucketAlreadyOwnedByYou":
@@ -79,7 +81,7 @@ class BucketManager:
             bucket.name, region)
         print(url)
         return
-
+    
     def get_local_path(self, path, root, bucket_name=None):
 
         s3_bucket = self.init_bucket(bucket_name)
