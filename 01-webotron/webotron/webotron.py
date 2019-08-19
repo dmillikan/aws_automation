@@ -45,11 +45,12 @@ def buckets():
 #######################################################################################################
 @buckets.command("sync")
 @click.argument("pathname", type=click.Path(exists=True))
+@click.option("--delete", default=False, is_flag=True, help="Will remove files from bucket that do not exist locally")
 @click.argument("bucketname")
-def sync_path(pathname, bucketname):
+def sync_path(pathname, bucketname,delete):
     """Synchronize Local Path to S3 Bucket"""
-    bucket_manager.sync_path(pathname, bucketname)
-    print(bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucketname)))
+    bucket_manager.sync_path(pathname, bucketname,delete)
+    print("\n\tYou can find your webpage at \n \t \t{0}".format(bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucketname))))
     return
 #######################################################################################################
 @buckets.command("list")
@@ -58,7 +59,6 @@ def list_buckets():
 
     for b in bucket_manager.all_buckets():
         print(b.name)
-
     return
 
 #######################################################################################################
@@ -101,6 +101,7 @@ def list_bucket_objects(bucket):
 
 if __name__ == '__main__':
     try:
+        print('\n')
         cli()
     except ClientError as e:
         print("An error occured of type {0}".format(e))
