@@ -1,17 +1,20 @@
 # -*- code utf-8 -*-
 
 """Classes for S3 Buckets"""
-
+import boto3
 from botocore.exceptions import ClientError
 import mimetypes
 from pathlib import Path
 from hashlib import md5
 import io
 import util
+from functools import reduce
 
 
 class BucketManager:
     """Manage an S3 Bucket"""
+
+    CHUNK_SIZE = 8388608
 
     def __init__(self, session):
         """Creates a BucketManger objcet"""
@@ -20,6 +23,10 @@ class BucketManager:
         self.manifest = {}
         self.local_manifest = {}
         self.delete_manifest = {}
+        self.transfer_config = boto3.s3.transfer.TransferConfig(
+            multipart_chunksize=self.CHUNK_SIZE,
+            multipart_threshold=self.CHUNK_SIZE
+        )
 
     def get_bucket_region(self, bucket):
         """Get the region for a bucket"""
@@ -42,7 +49,6 @@ class BucketManager:
 
     def init_bucket(self, bucket_name, region=None):
         """Initialzie S3 Bucket"""
-
         s3_bucket = self.s3.Bucket(bucket_name)
         # print(s3_bucket)
         try:
@@ -66,7 +72,6 @@ class BucketManager:
 
     def give_public_access(self, bucket):
         """Give S3 bucket public access"""
-
         pol = bucket.Policy()
         polstr = """{
                 "Version":"2012-10-17",
@@ -110,27 +115,43 @@ class BucketManager:
             if p and p.is_file():
                 self.local_manifest[str(p.relative_to(root))] = {
                     "Path": str(p), "ETag": self.calculate_etag(p)}
-                # if str(p.relative_to(root)) in self.manifest:
-                #     if self.manifest[str(p.relative_to(root))] != self.calculate_etag(p):
-                #         self.upload_file(s3_bucket, str(
-                #             p), str(p.relative_to(root)))
-                # else:
-                #     self.upload_file(s3_bucket, str(
-                #         p), str(p.relative_to(root)))
         return
 
     @staticmethod
     def hash_data(data):
         """Generate MD5 Hash on Data"""
         hash = md5()
-        hash.update(data)
 
-        return hash.hexdigest()
+        # if str(type(data)) == "<class 'str'>":
+        #     print('here')
+        #     hash.update(bytes(data,encoding='utf-8'))
+        # else:
+        #     hash.update(data)
+
+        hash.update(data)
+        return hash
 
     def calculate_etag(self, path):
         """For a given path, calculate the etag"""
+        hashes = []
+
         with open(path, 'rb') as p:
-            return self.hash_data(p.read())
+            while True:
+                data = p.read(self.CHUNK_SIZE)
+                if not data:
+                    break
+                hashes.append(self.hash_data(data))
+
+        if not hashes:
+            return
+        elif len(hashes) == 1:
+            return hashes[0].hexdigest()
+        else:
+            # print("\n\tFile {0} has more than 1 part".format(path))
+            red = reduce(lambda x, y: x + y, (h.digest() for h in hashes))
+            hash = "{0}-{1}".format(self.hash_data(red).hexdigest(),
+                                    len(hashes))
+            return hash
 
     def load_manifest(self, s3_bucket):
         """Load Paginator Manifest for Caching Purposes"""
@@ -147,7 +168,8 @@ class BucketManager:
         s3_bucket.upload_file(
             path,
             key,
-            ExtraArgs={'ContentType': content_type}
+            ExtraArgs={'ContentType': content_type},
+            Config=self.transfer_config
         )
         return
 
@@ -157,6 +179,9 @@ class BucketManager:
         s3_bucket = self.init_bucket(bucket_name)
         self.load_manifest(s3_bucket)
         self.get_local_path(path, path, s3_bucket)
+
+        # print(self.manifest)
+        # print(self.local_manifest)
 
         for f in self.local_manifest.items():
             do_upload = False
