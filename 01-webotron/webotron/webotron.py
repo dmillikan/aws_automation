@@ -29,7 +29,6 @@ def cli(profile):
     """Webotron Synchronizes Local Directories with S3"""
     global session, bucket_manager, client
     session_cfg = {}
-    
 
     if profile:
         session_cfg['profile_name'] = profile
@@ -50,7 +49,7 @@ def buckets():
 def sync_path(pathname, bucketname):
     """Synchronize Local Path to S3 Bucket"""
     bucket_manager.sync_path(pathname, bucketname)
-
+    print(bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucketname)))
     return
 #######################################################################################################
 @buckets.command("list")
@@ -74,7 +73,8 @@ def create_bucket(name, public, region, website):
     s3_bucket = bucket_manager.init_bucket(name, region)
 
     if website:
-        public = True
+        public = False
+        bucket_manager.give_public_access(s3_bucket)
         bucket_manager.host_website(s3_bucket, region)
 
     if public:

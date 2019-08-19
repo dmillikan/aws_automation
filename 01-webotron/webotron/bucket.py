@@ -6,6 +6,8 @@ from botocore.exceptions import ClientError
 import mimetypes
 from pathlib import Path
 
+import util
+
 
 class BucketManager:
     """Manage an S3 Bucket"""
@@ -14,6 +16,17 @@ class BucketManager:
         """Creates a BucketManger objcet"""
         self.session = session
         self.s3 = self.session.resource('s3')
+
+    def get_bucket_region(self, bucket):
+        """Get the region for a bucket"""
+        bucket_region = self.s3.meta.client.get_bucket_location(
+            Bucket=bucket.name)
+
+        return bucket_region["LocationConstraint"] or 'us-east-1'
+
+    def get_bucket_url(self, bucket):
+        """Get the website URL for bucket"""
+        return "http://{0}.{1}".format(bucket.name, util.get_region(self.get_bucket_region(bucket)).url)
 
     def all_buckets(self, region=None):
         """Get an iterator of all buckets"""
@@ -27,19 +40,22 @@ class BucketManager:
         """Initialzie S3 Bucket"""
 
         s3_bucket = self.s3.Bucket(bucket_name)
+        # print(s3_bucket)
         try:
-            if not self.s3.Bucket(bucket_name):
-                if region and region.lower() != 'us-east-1':
-                    s3_bucket = self.s3.create_bucket(
-                        Bucket=bucket_name,
-                        CreateBucketConfiguration={"LocationConstraint": region}
-                    )
-                else:
-                    s3_bucket = self.s3.create_bucket(Bucket=bucket_name)
+            # print('will attempt to create bucket {0} in region {1}'.format(bucket_name,region))
+            if region and region.lower() != 'us-east-1':
+                # print('\tbucket does not exist and region is no us-east-1')
+                s3_bucket = self.s3.create_bucket(
+                    Bucket=bucket_name,
+                    CreateBucketConfiguration={
+                        "LocationConstraint": region}
+                )
+            else:
+                s3_bucket = self.s3.create_bucket(Bucket=bucket_name)
 
         except ClientError as e:
             if e.response['Error']['Code'] == "BucketAlreadyOwnedByYou":
-                s3_bucket = self.s3.bucket(bucket_name)
+                s3_bucket = self.s3.Bucket(bucket_name)
             else:
                 raise e
 
@@ -77,11 +93,12 @@ class BucketManager:
             'IndexDocument': {
                 'Suffix': 'index.html'
             }})
-        url = "http://{0}.s3-website-{1}.amazonaws.com".format(
-            bucket.name, region)
-        print(url)
+        # url = "http://{0}.s3-website-{1}.amazonaws.com".format(
+        #     bucket.name, region)
+        # print(url)
+        print(self.get_bucket_url(bucket))
         return
-    
+
     def get_local_path(self, path, root, bucket_name=None):
 
         s3_bucket = self.init_bucket(bucket_name)
