@@ -151,7 +151,7 @@ class BucketManager:
         )
         return
 
-    def sync_path(self, pathname, bucket_name,delete):
+    def sync_path(self, pathname, bucket_name, delete):
         """Synchronize Local Path to S3 Bucket"""
         path = Path(pathname).expanduser().resolve()
         s3_bucket = self.init_bucket(bucket_name)
@@ -173,8 +173,8 @@ class BucketManager:
             for f in self.manifest.items():
                 if f[0] not in self.local_manifest:
                     print("\tWe will delete {0}".format(f[0]))
-                    del_obj.append({"Key" : f[0]})
+                    del_obj.append({"Key": f[0]})
 
             if del_obj:
-                self.delete_manifest = {"Objects" : del_obj}
+                self.delete_manifest = {"Objects": del_obj}
                 s3_bucket.delete_objects(Delete=self.delete_manifest)
