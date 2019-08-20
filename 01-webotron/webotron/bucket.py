@@ -47,6 +47,16 @@ class BucketManager:
         """Get an iterator of all objects within a bucket"""
         return self.s3.Bucket(bucket).objects.all()
 
+    def find_bucket(self, bucket_name, pattern_match, region=None):
+        """Get all buckets that match pattern"""
+        buckets = []
+        for bucket in self.all_buckets(region=region):
+            if (pattern_match and bucket.name.startswith(bucket_name)) \
+                    or (bucket.name == bucket_name):
+                buckets.append(bucket)
+
+        return buckets
+
     def init_bucket(self, bucket_name, region=None):
         """Initialzie S3 Bucket"""
         s3_bucket = self.s3.Bucket(bucket_name)
@@ -203,3 +213,30 @@ class BucketManager:
             if del_obj:
                 self.delete_manifest = {"Objects": del_obj}
                 s3_bucket.delete_objects(Delete=self.delete_manifest)
+
+    def delete_bucket(self, bucket_name, pattern_match=False):
+        """Empties Bucket and Deletes It"""
+        buckets = []
+
+        if pattern_match:
+            buckets = self.find_bucket(bucket_name, pattern_match)
+        else:
+            buckets = self.all_buckets()
+
+        for b in buckets:
+            if b.name in util.protected_buckets:
+                print("\t\t{0}\n\t\t💀  Will not delete protected bucket {1} 💀\n\t\t{2}".format('='*(len(b.name)+39),
+                                                                                          b.name, '='*(len(b.name)+39)))
+            else:
+                hasObj = bool(len(list(b.objects.all().limit(1))))
+                if hasObj:
+                    print(
+                        "\t\tWe will empty all objects from bucket {0}".format(b.name))
+                    for o in b.objects.all():
+                        if o.key:
+                            print("\t\t\tWe will delete {0} from bucket {1}".format(
+                                o.key, b.name))
+                    #         b.delete_objects(
+                    #             Delete={'Objects': [{'Key':  o.key}], 'Quiet': True})
+                print("\t\tWe will delete bucket {0}".format(b.name))
+                # b.delete()

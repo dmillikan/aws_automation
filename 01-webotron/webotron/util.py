@@ -45,6 +45,9 @@ region_endpoint = {
                               's3-website.me-south-1.amazonaws.com', 'Z1MPMWCPA7YB62')
 }
 
+protected_buckets = []
+protected_buckets.append("dmillikan-synology")
+protected_buckets.append("dmillikan-mail")
 
 def known_region(region):
     """Returns True if Region is Valid"""
@@ -54,3 +57,5 @@ def known_region(region):
 def get_region(region):
     """Returns Region Item"""
     return region_endpoint[region]
+
+

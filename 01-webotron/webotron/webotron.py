@@ -15,9 +15,12 @@ import click
 from botocore.exceptions import ClientError
 
 from bucket import BucketManager
+from domain import DomainManager
+import util
 
 session = None
 bucket_manager = None
+domain_manager = None
 client = None
 
 #######################################################################################################
@@ -27,7 +30,7 @@ client = None
 @click.option('--profile', default=None, help="Use a given AWS profile")
 def cli(profile):
     """Webotron Synchronizes Local Directories with S3"""
-    global session, bucket_manager, client
+    global session, bucket_manager, client, domain_manager
     session_cfg = {}
 
     if profile:
@@ -35,9 +38,33 @@ def cli(profile):
 
     session = boto3.Session(**session_cfg)
     bucket_manager = BucketManager(session)
+    domain_manager = DomainManager(session)
 
     client = boto3.client('s3')
+#######################################################################################################
+#######################################################################################################
+#######################################################################################################
+@cli.group("domains")
+def domains():
+    """Commands for Domains"""
+#######################################################################################################
+@domains.command("setup-domain")
+@click.argument("domain")
+@click.argument("bucket")
+def setup_domain(domain, bucket):
+    """Configure Domain to Bucket Mapping"""
+    zone = domain_manager.get_hosted_zone(domain) \
+        or domain_manager.create_hosted_zone(domain)
+    print(zone['Id'])
 
+    bucket_url = bucket_manager.get_bucket_url(bucket_manager.init_bucket(bucket))
+
+    print(bucket_url)
+
+
+    return
+#######################################################################################################
+#######################################################################################################
 #######################################################################################################
 @cli.group("buckets")
 def buckets():
@@ -55,13 +82,21 @@ def sync_path(pathname, bucketname, delete):
     return
 #######################################################################################################
 @buckets.command("list")
-def list_buckets():
-    """List all s3 buckets"""
+@click.option("--pattern", default=None, help="Will filter buckets starting with pattern")
+def list_buckets(pattern):
+    """List all s3 buckets \n
+    Will filter buckets with pattern is provided"""
+  
+    buckets = []
 
-    for b in bucket_manager.all_buckets():
+    if pattern:
+        for b in bucket_manager.find_bucket(pattern, True):
+            buckets.append(b)
+    else:
+        buckets = bucket_manager.all_buckets()
+    for b in buckets:
         print(b.name)
     return
-
 #######################################################################################################
 @buckets.command("create")
 @click.argument("name")
@@ -83,6 +118,32 @@ def create_bucket(name, public, region, website):
 
     return
 #######################################################################################################
+@buckets.command("delete")
+@click.argument("name")
+@click.option("--pattern_match", "pattern_match", default=False, is_flag=True, help = "Will filter buckets starting with pattern")
+def delete_bucket(name, pattern_match):
+    """Will empty and delete s3 bucket"""
+    
+    if name in util.protected_buckets:
+        print("\tCannot delete protected bucket {0}".format(name))
+    
+    else:
+        if pattern_match:
+            msg = "You are attempting to delete all buckets with name starting wtih {0}\n \tAre you sure (YES)\t: ".format(name)
+        else:
+            msg = "You are attempting to delete bucket named {0}\n \tAre you sure (YES)\t: ".format(
+                name)
+        
+        confirm = input(msg)
+
+        if confirm == 'YES':
+            if not name == "dmillikan-synology" and confirm == 'YES':
+                print("\tI am deleting it all now")
+                bucket_manager.delete_bucket(name,pattern_match=pattern_match)
+        else:
+            print("\tInvalid confirmation\n\t\tYou entered\t: {0}\n\tWill not delete bucket {1}".format(confirm,name))
+    return
+#######################################################################################################
 @buckets.group("objects")
 def objects():
     """Commands for Bucket Objects"""
@@ -102,9 +163,11 @@ def list_bucket_objects(bucket):
 
 if __name__ == '__main__':
     try:
-        print('\n')
+        print("🔥  "*40)
         cli()
+        
     except ClientError as e:
         print("An error occured of type {0}".format(e))
     except TypeError as e:
         print("An error occured of type {0}".format(e))
+     
