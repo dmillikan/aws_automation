@@ -77,8 +77,8 @@ def buckets():
 def sync_path(pathname, bucketname, delete):
     """Synchronize Local Path to S3 Bucket"""
     bucket_manager.sync_path(pathname, bucketname, delete)
-    print("\n\tYou can find your webpage at \n \t \t{0}".format(
-        bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucketname))))
+    # print("\n\tYou can find your webpage at \n \t \t{0}".format(
+    #     bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucketname))))
     return
 #######################################################################################################
 @buckets.command("list")
@@ -102,19 +102,25 @@ def list_buckets(pattern):
 @click.argument("name")
 @click.option("--region", "region", default='us-east-1', help='Bucket Region')
 @click.option("--public", "public", default=False, is_flag=True, help='Make Bucket Public')
-@click.option("--website", "website", default=False, is_flag=True, help='Host Static Website from Bucket')
+@click.option("--website_domain", "website", default=None, help='Host Static Website from Bucket\nWill Append Domain to Bucket')
 def create_bucket(name, public, region, website):
     """Create new s3 bucket"""
+
+    if website:
+        name = '.'.join([name,website])
 
     s3_bucket = bucket_manager.init_bucket(name, region)
 
     if website:
         public = False
         bucket_manager.give_public_access(s3_bucket)
-        bucket_manager.host_website(s3_bucket, region)
-
+        bucket_url = bucket_manager.host_website(s3_bucket, region)
+        zone = domain_manager.create_hosted_zone(website)
+        domain_record = domain_manager.create_s3_domain_record(s3_bucket,zone,region)
+        print(domain_record)
     if public:
         bucket_manager.give_public_access(s3_bucket)
+
 
     return
 #######################################################################################################
@@ -139,7 +145,8 @@ def delete_bucket(name, pattern_match):
         if confirm == 'YES':
             if not name == "dmillikan-synology" and confirm == 'YES':
                 print("\tI am deleting it all now")
-                bucket_manager.delete_bucket(name,pattern_match=pattern_match)
+                bucket_manager.delete_bucket(
+                    name, domain_manager, pattern_match=pattern_match)
         else:
             print("\tInvalid confirmation\n\t\tYou entered\t: {0}\n\tWill not delete bucket {1}".format(confirm,name))
     return
@@ -167,7 +174,7 @@ if __name__ == '__main__':
         cli()
         
     except ClientError as e:
-        print("An error occured of type {0}".format(e))
+        print("ClientError:\n\t{0}".format(e))
     except TypeError as e:
-        print("An error occured of type {0}".format(e))
+        print("TypeError:\n\t{0}".format(e))
      

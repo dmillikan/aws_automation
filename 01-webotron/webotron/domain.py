@@ -1,7 +1,7 @@
 # -*- code utf-8 -*-
 
 import uuid 
-
+import util
 """Classes for Route 53 Domains"""
 
 class DomainManager:
@@ -27,32 +27,87 @@ class DomainManager:
     def create_hosted_zone(self,domain_name):
         """Create a Hosted Zone"""
         zone_name = '.'.join(domain_name.split('.')[-2:]) + '.'
-        return self.client.create_hosted_zone(
-            Name = zone_name,
-            CallerReference = str(uuid.uuid4())
-        )
+        
+        zone = self.get_hosted_zone(domain_name)
 
-    def create_s3_domain_record(self,bucket,zone):
+        if not zone:
+            zone = self.client.create_hosted_zone(
+                Name = zone_name,
+                CallerReference = str(uuid.uuid4())
+            )
+        return zone
+
+    def get_record_sets(self, zone, bucket_name):
+        """Find a Hosted Zone that Matches Domain Name"""
+        bucket_name = bucket_name + '.'
+        r53_paginator = self.client.get_paginator('list_resource_record_sets')
+        for page in r53_paginator.paginate(HostedZoneId=zone['Id']):
+            for record in page['ResourceRecordSets']:
+               if record['Name'] == bucket_name and record['Type'] == 'A':
+                   return record
+
+        return None
+
+    def create_s3_domain_record(self,bucket,zone,region):
         """Create S3 Domain Record"""
+        region = util.get_region(region)
 
-        return self.client.change_resource_record_setsclient.change_resource_record_sets(
-            HostedZoneId=zone['Id'],
-            ChangeBatch={
-                'Comment': 'Added by Webotron',
-                'Changes': [
-                    {
-                        'Action': 'CREATE',
-                        'ResourceRecordSet': {
-                            'Name': 'string',
-                            'Type': 'A',
-                            'AliasTarget': {
-                                'HostedZoneId': 'string',
-                                'DNSName': 'string',
-                          
-                            },
-                           
-                        }
-                    },
-                ]
-            }
-        )
+        website_url = self.get_record_sets(zone, bucket.name)
+        if not website_url:
+            response = self.client.change_resource_record_sets(
+                HostedZoneId=zone['Id'],
+                ChangeBatch={
+                    'Comment': 'Added by Webotron',
+                    'Changes': [
+                        {
+                            'Action': 'CREATE',
+                            'ResourceRecordSet': {
+                                'Name': bucket.name,
+                                'Type': 'A',
+                                'AliasTarget': {
+                                    'HostedZoneId': region.hosted_zone,
+                                    'DNSName': region.url,
+                                    'EvaluateTargetHealth': False
+                                },
+                            }
+                        },
+                    ]
+                }
+            )['ResponseMetadata']['HTTPStatusCode']
+            if response == 200:
+                website_url = bucket.name
+        else:
+            website_url = website_url['Name'][:-1]
+        return "http://{0}".format(website_url)
+                    
+
+    def delete_s3_domain_record(self, bucket, zone):
+        """Remove S3 Domain Record"""
+               
+        website_url = self.get_record_sets(zone, bucket.name)
+        if website_url:
+            # print(website_url['AliasTarget'])
+
+            return self.client.change_resource_record_sets(
+                HostedZoneId=zone['Id'],
+                ChangeBatch={
+                    'Comment': 'Removed by Webotron',
+                    'Changes': [
+                        {
+                            'Action': 'DELETE',
+                            'ResourceRecordSet': {
+                                'Name': bucket.name,
+                                'Type': 'A',
+                                'AliasTarget': {
+                                    'HostedZoneId': website_url['AliasTarget']['HostedZoneId'],
+                                    'DNSName': website_url['AliasTarget']['DNSName'],
+                                    'EvaluateTargetHealth': website_url['AliasTarget']['EvaluateTargetHealth']
+                                },
+                               
+                            }
+                        },
+                    ]
+                }
+            )
+
+        return 

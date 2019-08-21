@@ -111,11 +111,8 @@ class BucketManager:
             'IndexDocument': {
                 'Suffix': 'index.html'
             }})
-        # url = "http://{0}.s3-website-{1}.amazonaws.com".format(
-        #     bucket.name, region)
-        # print(url)
-        print(self.get_bucket_url(bucket))
-        return
+        
+        return self.get_bucket_url(bucket)
 
     def get_local_path(self, path, root, s3_bucket):
         """Get List of Local Objects and Hash"""
@@ -214,15 +211,13 @@ class BucketManager:
                 self.delete_manifest = {"Objects": del_obj}
                 s3_bucket.delete_objects(Delete=self.delete_manifest)
 
-    def delete_bucket(self, bucket_name, pattern_match=False):
+    def delete_bucket(self, bucket_name, domain_manager, pattern_match=False):
         """Empties Bucket and Deletes It"""
         buckets = []
-
-        if pattern_match:
-            buckets = self.find_bucket(bucket_name, pattern_match)
-        else:
-            buckets = self.all_buckets()
-
+       
+        buckets = self.find_bucket(bucket_name, pattern_match)
+        if not buckets:
+            print("\t\tNo Buckets found to delete")
         for b in buckets:
             if b.name in util.protected_buckets:
                 print("\t\t{0}\n\t\t💀  Will not delete protected bucket {1} 💀\n\t\t{2}".format('='*(len(b.name)+39),
@@ -236,7 +231,24 @@ class BucketManager:
                         if o.key:
                             print("\t\t\tWe will delete {0} from bucket {1}".format(
                                 o.key, b.name))
-                    #         b.delete_objects(
-                    #             Delete={'Objects': [{'Key':  o.key}], 'Quiet': True})
+                            b.delete_objects(
+                                Delete={'Objects': [{'Key':  o.key}], 'Quiet': True})
                 print("\t\tWe will delete bucket {0}".format(b.name))
-                # b.delete()
+                ws = b.Website()
+                try:
+                    ws.load()
+                    print('\t\tWe need to delete the DNS')
+                    zone = domain_manager.get_hosted_zone(
+                        ".".join(b.name.split('.')[-2:]))
+                    
+                    print(domain_manager.delete_s3_domain_record(b,zone))
+
+                    
+
+                except ClientError as e:
+                    if e.response['Error']['Code'] == "NoSuchWebsiteConfiguration":
+                        pass
+                    else:
+                        raise e
+
+                b.delete()
