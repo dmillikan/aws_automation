@@ -110,13 +110,14 @@ def create_bucket(name, public, region, website):
         name = '.'.join([name,website])
 
     s3_bucket = bucket_manager.init_bucket(name, region)
-
+    region = bucket_manager.get_bucket_region(s3_bucket)
+    region_endpoint = util.get_region(region)
     if website:
         public = False
         bucket_manager.give_public_access(s3_bucket)
-        bucket_url = bucket_manager.host_website(s3_bucket, region)
+        bucket_manager.host_website(s3_bucket, region)
         zone = domain_manager.create_hosted_zone(website)
-        domain_record = domain_manager.create_s3_domain_record(s3_bucket,zone,region)
+        domain_record = domain_manager.create_s3_domain_record(s3_bucket,zone,region_endpoint)
         print(domain_record)
     if public:
         bucket_manager.give_public_access(s3_bucket)

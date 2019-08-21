@@ -2,6 +2,7 @@
 
 import uuid 
 import util
+import bucket
 """Classes for Route 53 Domains"""
 
 class DomainManager:
@@ -48,36 +49,35 @@ class DomainManager:
 
         return None
 
-    def create_s3_domain_record(self,bucket,zone,region):
+    def create_s3_domain_record(self,bucket,zone,region_endpoint):
         """Create S3 Domain Record"""
-        region = util.get_region(region)
-
-        website_url = self.get_record_sets(zone, bucket.name)
-        if not website_url:
-            response = self.client.change_resource_record_sets(
-                HostedZoneId=zone['Id'],
-                ChangeBatch={
-                    'Comment': 'Added by Webotron',
-                    'Changes': [
-                        {
-                            'Action': 'CREATE',
-                            'ResourceRecordSet': {
-                                'Name': bucket.name,
-                                'Type': 'A',
-                                'AliasTarget': {
-                                    'HostedZoneId': region.hosted_zone,
-                                    'DNSName': region.url,
-                                    'EvaluateTargetHealth': False
-                                },
-                            }
-                        },
-                    ]
-                }
-            )['ResponseMetadata']['HTTPStatusCode']
-            if response == 200:
-                website_url = bucket.name
-        else:
-            website_url = website_url['Name'][:-1]
+        
+        # website_url = self.get_record_sets(zone, bucket.name)
+        # if not website_url:
+        response = self.client.change_resource_record_sets(
+            HostedZoneId=zone['Id'],
+            ChangeBatch={
+                'Comment': 'Added by Webotron',
+                'Changes': [
+                    {
+                        'Action': 'UPSERT',
+                        'ResourceRecordSet': {
+                            'Name': bucket.name,
+                            'Type': 'A',
+                            'AliasTarget': {
+                                'HostedZoneId': region_endpoint.hosted_zone,
+                                'DNSName': region_endpoint.url,
+                                'EvaluateTargetHealth': False
+                            },
+                        }
+                    },
+                ]
+            }
+        )['ResponseMetadata']['HTTPStatusCode']
+        if response == 200:
+            website_url = bucket.name
+        # else:
+        #     website_url = website_url['Name'][:-1]
         return "http://{0}".format(website_url)
                     
 

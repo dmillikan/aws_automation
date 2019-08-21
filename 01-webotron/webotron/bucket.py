@@ -241,7 +241,10 @@ class BucketManager:
                     zone = domain_manager.get_hosted_zone(
                         ".".join(b.name.split('.')[-2:]))
                     
-                    print(domain_manager.delete_s3_domain_record(b,zone))
+                    response = domain_manager.delete_s3_domain_record(
+                        b, zone)['ResponseMetadata']['HTTPStatusCode']
+                    if response == 200:
+                        print('\t\t\tDNS deleted sucessfully')
 
                     
 
