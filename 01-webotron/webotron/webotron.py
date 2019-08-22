@@ -116,7 +116,8 @@ def list_distributions(website):
     if not distribution:
         msg = "CloudFront distribution does not exist for {0}".format(website)
     else:
-        msg = "CloudFront distribution {0} exists for {1}".format(distribution['DomainName'], website)
+        msg = "CloudFront distribution {0} is {1} for {2}".format(distribution['DomainName'], distribution['Status'], website)
+        
     padding = 99 - len(msg)
 
     print("\t⛅️" + (" " * floor(padding/2)) +
@@ -146,7 +147,6 @@ def setup_distribution(website):
         print("\t" + ("☠️   ")*10)
         print("🔱  "*40)
         return
-
     zone = domain_manager.get_hosted_zone(website)
     if not zone:
         print("\t" + ("☠️   ")*10 + "\n")
@@ -162,10 +162,7 @@ def setup_distribution(website):
         print("🔱  "*40)
         return
     cdn_manager.setup_distribution(website, bucket, certificate, dns)
-
-
-    # print("CloudFront distribution {0} exists for {1}".format(
-    #     distribution['DomainName'], website))
+    
     print("🔱  "*40)
     return
 #######################################################################################################
@@ -239,10 +236,9 @@ def create_bucket(name, public, region, website):
         
         certificate = cert_manager.get_certificate(website)
 
-        cdn_manager.setup_distribution(
-            website, s3_bucket, certificate, dns)
+        dist = cdn_manager.setup_distribution(website, s3_bucket, certificate, dns)
 
-
+        domain_manager.create_cf_domain_record(zone,name,dist['DomainName'])
         
     if public:
         bucket_manager.give_public_access(s3_bucket)
@@ -262,9 +258,7 @@ def delete_bucket(name, pattern_match):
     """Will empty and delete s3 bucket"""
 
     print("\t" + ("🚨    "*21)+"\n")
-    # msg = str(path)
-    # print("\t📄" + (" " * (floor((99-len(msg))/2))) +
-    #       msg + (" " * (ceil((99-len(msg))/2))) + "📄\n")
+
     if name in util.protected_buckets:
         print("\t" + ("💀    "*21)+"\n")
         msg = "Will not delete protected bucket {0}".format(name)
@@ -295,7 +289,7 @@ def delete_bucket(name, pattern_match):
                 msg=("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
                 print(msg)
                 bucket_manager.delete_bucket(
-                    name, domain_manager, pattern_match=pattern_match)
+                    name, domain_manager, cdn_manager, pattern_match=pattern_match)
         else:
             msg = "Invalid confirmation"
             msg = ("\t🚨    🚨    🚨" + (" " * (floor((79-len(msg))/2))) +

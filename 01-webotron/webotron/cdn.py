@@ -20,8 +20,6 @@ class CloudFrontManager:
         self.session = session
         self.client = self.session.client('cloudfront')
 
-
-
     def get_distribution(self, website):
         """Find a CloudFront Distribution that Matches Domain Name"""
 
@@ -29,17 +27,16 @@ class CloudFrontManager:
 
         for page in cf_paginator.paginate():
             for dist in page['DistributionList']['Items']:
-                for origin in dist['Origins']['Items']:
-                    if origin['DomainName'] == website:
+                for alias in dist['Aliases']['Items']:
+                    if alias == website:
                         return dist
 
         return None
 
     def setup_distribution(self, website, bucket, certificate, dns):
         """Create a CloudFront Distribution for a Domain Name"""
-
-
-        if not self.get_distribution(website):
+        dist = self.get_distribution(bucket.name)
+        if not dist:
             print("\t" + ("⛅️    " * 21)+"\n")
             print(
                 '\t⛅️    We need to configure CloudFront for {0}'.format(website)+"\n")
@@ -47,7 +44,7 @@ class CloudFrontManager:
             print("\t⛅️    Certificate    : " + certificate+"\n")
             zone = dns['AliasTarget']['HostedZoneId']
             print("\t⛅️    Zone           : " + zone+"\n")
-       
+
             origin_id = 'S3-' + website
             response = self.client.create_distribution(
                 DistributionConfig={
@@ -68,7 +65,7 @@ class CloudFrontManager:
                                 'S3OriginConfig': {
                                     'OriginAccessIdentity': ''
                                 }
-                               
+
                             }
                         ]
                     },
@@ -78,7 +75,7 @@ class CloudFrontManager:
                             'QueryString': True | False,
                             'Cookies': {'Forward': 'all'},
                             'Headers': {'Quantity': 0},
-                            'QueryStringCacheKeys': {'Quantity' : 0}
+                            'QueryStringCacheKeys': {'Quantity': 0}
                         },
                         'TrustedSigners': {
                             'Enabled': False,
@@ -94,21 +91,43 @@ class CloudFrontManager:
                     'ViewerCertificate': {
                         'CloudFrontDefaultCertificate': False,
                         'ACMCertificateArn': certificate,
-                        'SSLSupportMethod': 'sni-only' ,
-                        'MinimumProtocolVersion': 'TLSv1.1_2016' ,
+                        'SSLSupportMethod': 'sni-only',
+                        'MinimumProtocolVersion': 'TLSv1.1_2016',
                     }
                 }
             )
-           
+
             print("\t⛅️    CloudFront URL : " +
                   response['Distribution']['DomainName']+"\n")
+            print("\t⛅️    Waiting for CloudFront to Deploy\n")
+            waiter = self.client.get_waiter('distribution_deployed')
+            waiter.wait(
+                Id=response['Distribution']['Id'],
+                WaiterConfig={
+                    'Delay': 30,
+                    'MaxAttempts': 50
+                }
+            )
+            print("\t⛅️    CloudFront Deployed\n")
             print("\t" + ("⛅️    " * 21)+"\n")
-            return(response)
+            return(response['Distribution'])
         else:
             print("\t" + ("⛅️    " * 21)+"\n")
-            msg = "CloudFront Already Configured for {0}".format(website)
+            msg = "CloudFront Already Configured for {0}".format(bucket.name)
             padding = 99 - len(msg)
             print("\t⛅️" + (" " * floor(padding/2)) +
                   msg + (" " * ceil(padding/2)) + "⛅️\n")
-
             print("\t" + ("⛅️    " * 21)+"\n")
+            return dist
+
+    def delete_distribution(self, website):
+        """Delete a CloudFront Distribution for a Domain Name"""
+        dist = self.get_distribution(website)
+        if dist:
+            print("dist found")
+
+            dist.
+        else:
+            print("no dist found")
+
+        return

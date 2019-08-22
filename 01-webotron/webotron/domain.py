@@ -111,3 +111,31 @@ class DomainManager:
             )
 
         return 
+
+    def create_cf_domain_record(self, zone, domain_name, cf_domain):
+        """Create S3 Domain Record"""
+
+        # website_url = self.get_record_sets(zone, bucket.name)
+        # if not website_url:
+        response = self.client.change_resource_record_sets(
+            HostedZoneId=zone['Id'],
+            ChangeBatch={
+                'Comment': 'Added by Webotron',
+                'Changes': [
+                    {
+                        'Action': 'UPSERT',
+                        'ResourceRecordSet': {
+                            'Name': domain_name,
+                            'Type': 'A',
+                            'AliasTarget': {
+                                'HostedZoneId': 'Z2FDTNDATAQYW2',
+                                'DNSName': cf_domain,
+                                'EvaluateTargetHealth': False
+                            },
+                        }
+                    },
+                ]
+            }
+        )
+        
+        return response

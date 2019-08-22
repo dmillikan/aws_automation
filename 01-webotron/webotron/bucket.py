@@ -231,7 +231,7 @@ class BucketManager:
         print("\t" + ("📄    "*21))
         return
 
-    def delete_bucket(self, bucket_name, domain_manager, pattern_match=False):
+    def delete_bucket(self, bucket_name, domain_manager, cdn_manager, pattern_match=False):
         """Empties Bucket and Deletes It"""
         buckets = []
 
@@ -270,11 +270,20 @@ class BucketManager:
                 ws = b.Website()
                 try:
                     ws.load()
+                    
+                    zone = domain_manager.get_hosted_zone(
+                        ".".join(b.name.split('.')[-2:]))
+
+                    cdn = cdn_manager.get_distribution(b.name)
+
+                    msg = "We need to delete CloudFront"
+                    msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+                    print(msg)
+                    
                     msg = "We need to delete the DNS"
                     msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
                     print(msg)
-                    zone = domain_manager.get_hosted_zone(
-                        ".".join(b.name.split('.')[-2:]))
+
 
                     response = domain_manager.delete_s3_domain_record(
                         b, zone)['ResponseMetadata']['HTTPStatusCode']
