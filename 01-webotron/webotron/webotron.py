@@ -16,11 +16,11 @@ from botocore.exceptions import ClientError
 from math import floor
 from math import ceil
 
-from bucket import BucketManager
-from domain import DomainManager
-from cert import CertManager
-from cdn import CloudFrontManager
-import util
+from webotron.bucket import BucketManager
+from webotron.domain import DomainManager
+from webotron.cert import CertManager
+from webotron.cdn import CloudFrontManager
+from webotron import util
 
 from pprint import pprint
 

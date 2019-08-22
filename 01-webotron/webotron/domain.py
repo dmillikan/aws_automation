@@ -1,8 +1,8 @@
 # -*- code utf-8 -*-
 
-import uuid 
-import util
-import bucket
+import uuid
+from webotron import util
+import webotron.bucket
 """Classes for Route 53 Domains"""
 
 class DomainManager:

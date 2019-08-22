@@ -7,9 +7,9 @@ from pprint import pprint
 from math import floor
 from math import ceil
 import uuid
-from cert import CertManager
-from bucket import BucketManager
-from domain import DomainManager
+from webotron.cert import CertManager
+from webotron.bucket import BucketManager
+from webotron.domain import DomainManager
 
 
 class CloudFrontManager:
