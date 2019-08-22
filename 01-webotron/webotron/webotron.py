@@ -109,7 +109,7 @@ def cdn():
 @click.argument("website")
 def list_distributions(website):
     """Returns All Distirbutions"""
-    distribution = cdn_manager.get_distribution(website)
+    distribution = cdn_manager.lookup_distribution(website)
     print("\t" + ("⛅️    " * 21) + "\n")
     # print("\t" + "."*150)
     msg = ""
@@ -165,6 +165,19 @@ def setup_distribution(website):
     
     print("🔱  "*40)
     return
+#######################################################################################################
+@cdn.command("delete")
+@click.argument("website")
+def delete_distribution(website):
+    """Deletes Distribution"""
+
+    print("\t" + ("🌧    " * 21) + "\n")
+
+    cdn_manager.disable_distribution(website)
+
+
+    print("\t" + ("🌧    " * 21) + "\n")
+    print("🔱  "*40)
 #######################################################################################################
 #######################################################################################################
 #######################################################################################################
@@ -240,6 +253,10 @@ def create_bucket(name, public, region, website):
 
         domain_manager.create_cf_domain_record(zone,name,dist['DomainName'])
         
+        msg = "You may browse your website at https://{0}".format(name)
+        print("\t🌎" + (" " * (floor((99-len(msg))/2))) +
+              msg + (" " * (ceil((99-len(msg))/2))) + "🌍\n")
+
     if public:
         bucket_manager.give_public_access(s3_bucket)
         msg = "🧨    🧨    🧨    Bucket Has Public Access    🧨    🧨    🧨"

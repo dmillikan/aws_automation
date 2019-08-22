@@ -274,12 +274,12 @@ class BucketManager:
                     zone = domain_manager.get_hosted_zone(
                         ".".join(b.name.split('.')[-2:]))
 
-                    cdn = cdn_manager.get_distribution(b.name)
-
                     msg = "We need to delete CloudFront"
                     msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
                     print(msg)
-                    
+
+                    cdn_manager.disable_distribution(b.name)
+
                     msg = "We need to delete the DNS"
                     msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
                     print(msg)

@@ -20,7 +20,7 @@ class CloudFrontManager:
         self.session = session
         self.client = self.session.client('cloudfront')
 
-    def get_distribution(self, website):
+    def lookup_distribution(self, website):
         """Find a CloudFront Distribution that Matches Domain Name"""
 
         cf_paginator = self.client.get_paginator('list_distributions')
@@ -35,7 +35,7 @@ class CloudFrontManager:
 
     def setup_distribution(self, website, bucket, certificate, dns):
         """Create a CloudFront Distribution for a Domain Name"""
-        dist = self.get_distribution(bucket.name)
+        dist = self.lookup_distribution(bucket.name)
         if not dist:
             print("\t" + ("⛅️    " * 21)+"\n")
             print(
@@ -72,7 +72,7 @@ class CloudFrontManager:
                     'DefaultCacheBehavior': {
                         'TargetOriginId': origin_id,
                         'ForwardedValues': {
-                            'QueryString': True | False,
+                            'QueryString': True,
                             'Cookies': {'Forward': 'all'},
                             'Headers': {'Quantity': 0},
                             'QueryStringCacheKeys': {'Quantity': 0}
@@ -120,14 +120,66 @@ class CloudFrontManager:
             print("\t" + ("⛅️    " * 21)+"\n")
             return dist
 
-    def delete_distribution(self, website):
-        """Delete a CloudFront Distribution for a Domain Name"""
-        dist = self.get_distribution(website)
-        if dist:
-            print("dist found")
 
-            dist.
+
+    def disable_distribution(self, website):
+        """Delete a CloudFront Distribution for a Domain Name"""
+        dist = self.lookup_distribution(website)
+        if dist:
+            curConfig = self.client.get_distribution_config(Id=dist['Id'])
+          
+            ETag = curConfig['ETag']
+            DistConfg = curConfig['DistributionConfig']
+            if DistConfg['Enabled']:
+                msg = "Disabling CloudFront Distribution"
+                padding = 99 - len(msg)
+                print("\t🌧" + (" " * floor(padding/2)) +
+                    msg + (" " * ceil(padding/2)) + "🌧\n")
+                DistConfg['Enabled'] = False
+                origin_id = dist['Origins']['Items'][0]['Id']
+
+                response = self.client.update_distribution(
+                    DistributionConfig=DistConfg,
+                    Id=dist['Id'],
+                    IfMatch=ETag
+                )
+
+                waiter = self.client.get_waiter('distribution_deployed')
+                waiter.wait(
+                    Id=dist['Id'],
+                    WaiterConfig={
+                        'Delay': 30,
+                        'MaxAttempts': 50
+                    }
+            )
+      
+            else:
+                msg = "CloudFront Distribution Not Enabled"
+                padding = 99 - len(msg)
+                print("\t🌧" + (" " * floor(padding/2)) +
+                    msg + (" " * ceil(padding/2)) + "🌧\n")
+            
+            msg = "Deleting CloudFront Distribution"
+            padding = 99 - len(msg)
+            print("\t🌧" + (" " * floor(padding/2)) +
+                  msg + (" " * ceil(padding/2)) + "🌧\n")
+            curConfig = self.client.get_distribution_config(Id=dist['Id'])
+            ETag = curConfig['ETag']
+            self.client.delete_distribution(
+                Id=dist['Id'],
+                IfMatch=ETag
+            )
+
+            msg = "CloudFront Distribution Deleted"
+            padding = 99 - len(msg)
+            print("\t🌧" + (" " * floor(padding/2)) +
+                  msg + (" " * ceil(padding/2)) + "🌧\n")
+            print("\t" + ("⛅️    " * 21)+"\n")
+
         else:
-            print("no dist found")
+            msg = "CloudFront Distribution Does Not Exists"
+            padding = 99 - len(msg)
+            print("\t🌧" + (" " * floor(padding/2)) +
+                  msg + (" " * ceil(padding/2)) + "🌧\n")
 
         return
