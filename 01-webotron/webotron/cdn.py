@@ -104,8 +104,8 @@ class CloudFrontManager:
             waiter.wait(
                 Id=response['Distribution']['Id'],
                 WaiterConfig={
-                    'Delay': 30,
-                    'MaxAttempts': 50
+                    'Delay': 60,
+                    'MaxAttempts': 60
                 }
             )
             print("\t⛅️    CloudFront Deployed\n")
@@ -148,8 +148,8 @@ class CloudFrontManager:
                 waiter.wait(
                     Id=dist['Id'],
                     WaiterConfig={
-                        'Delay': 30,
-                        'MaxAttempts': 50
+                        'Delay': 60,
+                        'MaxAttempts': 60
                     }
             )
       
