@@ -233,13 +233,16 @@ def create_bucket(name, public, region, website):
         bucket_manager.give_public_access(s3_bucket)
         bucket_manager.host_website(s3_bucket, region)
         zone = domain_manager.create_hosted_zone(website)
-        domain_record = domain_manager.create_s3_domain_record(
+        domain_manager.create_s3_domain_record(
             s3_bucket, zone, region_endpoint)
-        cert_manager.get_certificate(website)
-        msg = domain_record
+        dns = domain_manager.get_record_sets(zone, name)
         
-        print("\t🗑" + (" " * (floor((99-len(msg))/2))) +
-              msg + (" " * (ceil((99-len(msg))/2))) + "🗑\n")
+        certificate = cert_manager.get_certificate(website)
+
+        cdn_manager.setup_distribution(
+            website, s3_bucket, certificate, dns)
+
+
         
     if public:
         bucket_manager.give_public_access(s3_bucket)
@@ -258,27 +261,55 @@ def create_bucket(name, public, region, website):
 def delete_bucket(name, pattern_match):
     """Will empty and delete s3 bucket"""
 
+    print("\t" + ("🚨    "*21)+"\n")
+    # msg = str(path)
+    # print("\t📄" + (" " * (floor((99-len(msg))/2))) +
+    #       msg + (" " * (ceil((99-len(msg))/2))) + "📄\n")
     if name in util.protected_buckets:
-        print("\tCannot delete protected bucket {0}".format(name))
+        print("\t" + ("💀    "*21)+"\n")
+        msg = "Will not delete protected bucket {0}".format(name)
+        msg = ("\t💀    💀    💀" + (" " * (floor((79-len(msg))/2))) +
+               msg + (" " * (ceil((79-len(msg))/2))) + "💀    💀    💀\n")
+        print(msg)
+        print("\t" + ("💀    "*21)+"\n")
+
 
     else:
         if pattern_match:
-            msg = "You are attempting to delete all buckets with name starting wtih {0}\n \tAre you sure (YES)\t: ".format(
+            msg = "You are attempting to delete all buckets with name starting wtih {0}".format(
                 name)
         else:
-            msg = "You are attempting to delete bucket named {0}\n \tAre you sure (YES)\t: ".format(
+            msg = "You are attempting to delete bucket named {0}".format(
                 name)
+        msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+        print(msg)
 
+        msg = "Are You Sure (YES) : "
+        msg = ("\t🚨    " + msg )
         confirm = input(msg)
+        print(" ")
 
         if confirm == 'YES':
             if not name == "dmillikan-synology" and confirm == 'YES':
-                print("\tI am deleting it all now")
+                msg = "I am deleting it all now"
+                msg=("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+                print(msg)
                 bucket_manager.delete_bucket(
                     name, domain_manager, pattern_match=pattern_match)
         else:
-            print("\tInvalid confirmation\n\t\tYou entered\t: {0}\n\tWill not delete bucket {1}".format(
-                confirm, name))
+            msg = "Invalid confirmation"
+            msg = ("\t🚨    🚨    🚨" + (" " * (floor((79-len(msg))/2))) +
+                   msg + (" " * (ceil((79-len(msg))/2))) + "🚨    🚨    🚨\n")
+            print(msg)
+            msg = "You entered        : {0}".format(confirm)
+            msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+            print(msg)
+            msg = "Will not delete bucket {0}".format(name)
+            msg=("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+            print(msg)
+
+
+    print("\t" + ("🚨    "*21)+"\n")
     print("🔱  "*40)
     return
 #######################################################################################################

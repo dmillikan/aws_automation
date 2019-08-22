@@ -38,279 +38,77 @@ class CloudFrontManager:
     def setup_distribution(self, website, bucket, certificate, dns):
         """Create a CloudFront Distribution for a Domain Name"""
 
-        
+
         if not self.get_distribution(website):
             print("\t" + ("⛅️    " * 21)+"\n")
             print(
                 '\t⛅️    We need to configure CloudFront for {0}'.format(website)+"\n")
-            print("\t⛅️    " + bucket.name+"\n")
-            print("\t⛅️    " + certificate+"\n")
+            print("\t⛅️    Bucket         : " + bucket.name+"\n")
+            print("\t⛅️    Certificate    : " + certificate+"\n")
             zone = dns['AliasTarget']['HostedZoneId']
-            print("\t⛅️    " + zone+"\n")
+            print("\t⛅️    Zone           : " + zone+"\n")
+       
+            origin_id = 'S3-' + website
+            response = self.client.create_distribution(
+                DistributionConfig={
+                    'CallerReference': str(uuid.uuid4()),
+                    'Aliases': {
+                        'Quantity': 1,
+                        'Items': [bucket.name]
+                    },
+                    'DefaultRootObject': 'index.html',
+                    'Comment': 'Created by Webotron',
+                    'Enabled': True,
+                    'Origins': {
+                        'Quantity': 1,
+                        'Items': [
+                            {
+                                'Id': origin_id,
+                                'DomainName': '{}.s3.amazonaws.com'.format(bucket.name),
+                                'S3OriginConfig': {
+                                    'OriginAccessIdentity': ''
+                                }
+                               
+                            }
+                        ]
+                    },
+                    'DefaultCacheBehavior': {
+                        'TargetOriginId': origin_id,
+                        'ForwardedValues': {
+                            'QueryString': True | False,
+                            'Cookies': {'Forward': 'all'},
+                            'Headers': {'Quantity': 0},
+                            'QueryStringCacheKeys': {'Quantity' : 0}
+                        },
+                        'TrustedSigners': {
+                            'Enabled': False,
+                            'Quantity': 0
+                        },
+                        'ViewerProtocolPolicy': 'redirect-to-https',
+                        'SmoothStreaming': False,
+                        'MinTTL': 3600,
+                        'DefaultTTL': 86400,
+                        'MaxTTL': 86400,
+                        'Compress': False,
+                    },
+                    'ViewerCertificate': {
+                        'CloudFrontDefaultCertificate': False,
+                        'ACMCertificateArn': certificate,
+                        'SSLSupportMethod': 'sni-only' ,
+                        'MinimumProtocolVersion': 'TLSv1.1_2016' ,
+                    }
+                }
+            )
+           
+            print("\t⛅️    CloudFront URL : " +
+                  response['Distribution']['DomainName']+"\n")
             print("\t" + ("⛅️    " * 21)+"\n")
+            return(response)
         else:
             print("\t" + ("⛅️    " * 21)+"\n")
             msg = "CloudFront Already Configured for {0}".format(website)
             padding = 99 - len(msg)
             print("\t⛅️" + (" " * floor(padding/2)) +
                   msg + (" " * ceil(padding/2)) + "⛅️\n")
-            
+
             print("\t" + ("⛅️    " * 21)+"\n")
-            
-
-
-                    
-#   
-#       check if there is a dist already
-#       get certificate
-#       get the dns record
-#       
-# 
-#
-#
-"""
-        response = self.client.create_distribution(
-            DistributionConfig={
-                'CallerReference': str(uuid.uuid4()),
-                # 'Aliases': {
-                #     'Quantity': 123,
-                #     'Items': [
-                #         'string',
-                #     ]
-                # },
-                # 'DefaultRootObject': 'string',
-                'Origins': {
-                    'Quantity': 1,
-                    'Items': [
-                        {
-                            'Id': 'custom-'+website,
-                            'DomainName': website,
-                            # 'OriginPath': '',
-                            # 'CustomHeaders': {
-                            #     'Quantity': 123,
-                            #     'Items': [
-                            #         {
-                            #             'HeaderName': 'string',
-                            #             'HeaderValue': 'string'
-                            #         },
-                            #     ]
-                            # },
-                            # 'S3OriginConfig': {
-                            #     'OriginAccessIdentity': 'string'
-                            # },
-                            'CustomOriginConfig': {
-                                'HTTPPort': 80,
-                                'HTTPSPort': 443,
-                                'OriginProtocolPolicy': 'http-only'
-                                'OriginSslProtocols': {
-                                    'Quantity': 1,
-                                    'Items': ['TLSv1']
-                                },
-                                'OriginReadTimeout': 30,
-                                'OriginKeepaliveTimeout': 5
-                            }
-                        },
-                    ]
-                },
-                # 'OriginGroups': {
-                #     'Quantity': 123,
-                #     'Items': [
-                #         {
-                #             'Id': 'string',
-                #             'FailoverCriteria': {
-                #                 'StatusCodes': {
-                #                     'Quantity': 123,
-                #                     'Items': [
-                #                         123,
-                #                     ]
-                #                 }
-                #             },
-                #             'Members': {
-                #                 'Quantity': 123,
-                #                 'Items': [
-                #                     {
-                #                         'OriginId': 'string'
-                #                     },
-                #                 ]
-                #             }
-                #         },
-                #     ]
-                # },
-                'DefaultCacheBehavior': {
-                    'TargetOriginId': 'custom-'+website,
-                    'ForwardedValues': {
-                        'QueryString': True | False,
-                        'Cookies': {
-                            'Forward': 'none' | 'whitelist' | 'all',
-                            'WhitelistedNames': {
-                                'Quantity': 123,
-                                'Items': [
-                                    'string',
-                                ]
-                            }
-                        },
-                        'Headers': {
-                            'Quantity': 123,
-                            'Items': [
-                                'string',
-                            ]
-                        },
-                        'QueryStringCacheKeys': {
-                            'Quantity': 123,
-                            'Items': [
-                                'string',
-                            ]
-                        }
-                    },
-                    'TrustedSigners': {
-                        'Enabled': True | False,
-                        'Quantity': 123,
-                        'Items': [
-                            'string',
-                        ]
-                    },
-                    'ViewerProtocolPolicy': 'redirect-to-https',
-                    'MinTTL': 123,
-                    'AllowedMethods': {
-                        'Quantity': 123,
-                        'Items': [
-                            'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'OPTIONS' | 'DELETE',
-                        ],
-                        'CachedMethods': {
-                            'Quantity': 123,
-                            'Items': [
-                                'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'OPTIONS' | 'DELETE',
-                            ]
-                        }
-                    },
-                    'SmoothStreaming': False,
-                    'DefaultTTL': 123,
-                    'MaxTTL': 123,
-                    'Compress': False,
-                    # 'LambdaFunctionAssociations': {
-                    #     'Quantity': 123,
-                    #     'Items': [
-                    #         {
-                    #             'LambdaFunctionARN': 'string',
-                    #             'EventType': 'viewer-request' | 'viewer-response' | 'origin-request' | 'origin-response',
-                    #             'IncludeBody': True | False
-                    #         },
-                    #     ]
-                    # },
-                    'FieldLevelEncryptionId': 'string'
-                },
-                'CacheBehaviors': {
-                    'Quantity': 123,
-                    'Items': [
-                        {
-                            'PathPattern': '*',
-                            'TargetOriginId': 'string',
-                            'ForwardedValues': {
-                                'QueryString': True | False,
-                                'Cookies': {
-                                    'Forward': 'none' | 'whitelist' | 'all',
-                                    'WhitelistedNames': {
-                                        'Quantity': 123,
-                                        'Items': [
-                                            'string',
-                                        ]
-                                    }
-                                },
-                                'Headers': {
-                                    'Quantity': 123,
-                                    'Items': [
-                                        'string',
-                                    ]
-                                },
-                                'QueryStringCacheKeys': {
-                                    'Quantity': 123,
-                                    'Items': [
-                                        'string',
-                                    ]
-                                }
-                            },
-                            'TrustedSigners': {
-                                'Enabled': True | False,
-                                'Quantity': 123,
-                                'Items': [
-                                    'string',
-                                ]
-                            },
-                            'ViewerProtocolPolicy': 'redirect-to-https',
-                            'MinTTL': 123,
-                            'AllowedMethods': {
-                                'Quantity': 123,
-                                'Items': [
-                                    'GET' | 'HEAD' ,
-                                ],
-                                'CachedMethods': {
-                                    'Quantity': 123,
-                                    'Items': [
-                                        'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'OPTIONS' | 'DELETE',
-                                    ]
-                                }
-                            },
-                            'SmoothStreaming': True | False,
-                            'DefaultTTL': 123,
-                            'MaxTTL': 123,
-                            'Compress': True | False,
-                            'LambdaFunctionAssociations': {
-                                'Quantity': 123,
-                                'Items': [
-                                    {
-                                        'LambdaFunctionARN': 'string',
-                                        'EventType': 'viewer-request' | 'viewer-response' | 'origin-request' | 'origin-response',
-                                        'IncludeBody': True | False
-                                    },
-                                ]
-                            },
-                            'FieldLevelEncryptionId': 'string'
-                        },
-                    ]
-                },
-                'CustomErrorResponses': {
-                    'Quantity': 123,
-                    'Items': [
-                        {
-                            'ErrorCode': 123,
-                            'ResponsePagePath': 'string',
-                            'ResponseCode': 'string',
-                            'ErrorCachingMinTTL': 123
-                        },
-                    ]
-                },
-                'Comment': 'string',
-                'Logging': {
-                    'Enabled': True | False,
-                    'IncludeCookies': True | False,
-                    'Bucket': 'string',
-                    'Prefix': 'string'
-                },
-                'PriceClass': 'PriceClass_100' | 'PriceClass_200' | 'PriceClass_All',
-                'Enabled': True | False,
-                'ViewerCertificate': {
-                    'CloudFrontDefaultCertificate': True | False,
-                    'IAMCertificateId': 'string',
-                    'ACMCertificateArn': 'string',
-                    'SSLSupportMethod': 'sni-only' | 'vip',
-                    'MinimumProtocolVersion': 'SSLv3' | 'TLSv1' | 'TLSv1_2016' | 'TLSv1.1_2016' | 'TLSv1.2_2018',
-                    'Certificate': 'string',
-                    'CertificateSource': 'cloudfront' | 'iam' | 'acm'
-                },
-                'Restrictions': {
-                    'GeoRestriction': {
-                        'RestrictionType': 'blacklist' | 'whitelist' | 'none',
-                        'Quantity': 123,
-                        'Items': [
-                            'string',
-                        ]
-                    }
-                },
-                'WebACLId': 'string',
-                'HttpVersion': 'http1.1' | 'http2',
-                'IsIPV6Enabled': True | False
-            }
-        )
-        
-  """      
-        

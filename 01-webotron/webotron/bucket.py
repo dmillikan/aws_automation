@@ -237,34 +237,51 @@ class BucketManager:
 
         buckets = self.find_bucket(bucket_name, pattern_match)
         if not buckets:
-            print("\t\tNo Buckets found to delete")
+            msg = "No Buckets found to delete"
+            msg = ("\t🚨    🚨    🚨" + (" " * (floor((79-len(msg))/2))) +
+                   msg + (" " * (ceil((79-len(msg))/2))) + "🚨    🚨    🚨\n")
+            print(msg)
+
         for b in buckets:
             if b.name in util.protected_buckets:
-                print("\t\t{0}\n\t\t💀  Will not delete protected bucket {1} 💀\n\t\t{2}".format('='*(len(b.name)+39),
-                                                                                               b.name, '='*(len(b.name)+39)))
+                print("\t" + ("💀    "*21)+"\n")
+                msg = "Will not delete protected bucket {0}".format(b.name)
+                msg = ("\t💀    💀    💀" + (" " * (floor((79-len(msg))/2))) +
+                    msg + (" " * (ceil((79-len(msg))/2))) + "💀    💀    💀\n")
+                print(msg)
+                print("\t" + ("💀    "*21)+"\n")
             else:
                 hasObj = bool(len(list(b.objects.all().limit(1))))
                 if hasObj:
-                    print(
-                        "\t\tWe will empty all objects from bucket {0}".format(b.name))
+                    msg = "We will empty all objects from bucket {0}".format(b.name)
+                    msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+                    print(msg)
                     for o in b.objects.all():
                         if o.key:
-                            print("\t\t\tWe will delete {0} from bucket {1}".format(
-                                o.key, b.name))
+                            msg = "We will delete {0}".format(o.key)
+                            msg=("\t🚨\t    " + msg + (" " * (88-len(msg))) + "🚨\n")
+                            print(msg)
                             b.delete_objects(
                                 Delete={'Objects': [{'Key':  o.key}], 'Quiet': True})
-                print("\t\tWe will delete bucket {0}".format(b.name))
+                
+                msg = "We will delete bucket {0}".format(b.name)
+                msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+                print(msg)
                 ws = b.Website()
                 try:
                     ws.load()
-                    print('\t\tWe need to delete the DNS')
+                    msg = "We need to delete the DNS"
+                    msg = ("\t🚨    " + msg + (" " * (95-len(msg))) + "🚨\n")
+                    print(msg)
                     zone = domain_manager.get_hosted_zone(
                         ".".join(b.name.split('.')[-2:]))
 
                     response = domain_manager.delete_s3_domain_record(
                         b, zone)['ResponseMetadata']['HTTPStatusCode']
                     if response == 200:
-                        print('\t\t\tDNS deleted sucessfully')
+                        msg = "DNS deleted sucessfully"
+                        msg = ("\t🚨\t    " + msg + (" " * (88-len(msg))) + "🚨\n")
+                        print(msg)
 
                 except ClientError as e:
                     if e.response['Error']['Code'] == "NoSuchWebsiteConfiguration":
