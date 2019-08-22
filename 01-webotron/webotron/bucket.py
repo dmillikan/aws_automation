@@ -9,6 +9,8 @@ from hashlib import md5
 import io
 import util
 from functools import reduce
+from math import floor
+from math import ceil
 
 
 class BucketManager:
@@ -17,7 +19,7 @@ class BucketManager:
     CHUNK_SIZE = 8388608
 
     def __init__(self, session):
-        """Creates a BucketManger objcet"""
+        """Creates a BucketManger object"""
         self.session = session
         self.s3 = self.session.resource('s3')
         self.manifest = {}
@@ -46,6 +48,10 @@ class BucketManager:
     def all_objects(self, bucket):
         """Get an iterator of all objects within a bucket"""
         return self.s3.Bucket(bucket).objects.all()
+
+    def get_bucket(self, bucket_name):
+        """Returns a Bucket Object"""
+        return self.s3.Bucket(bucket_name)
 
     def find_bucket(self, bucket_name, pattern_match, region=None):
         """Get all buckets that match pattern"""
@@ -111,7 +117,7 @@ class BucketManager:
             'IndexDocument': {
                 'Suffix': 'index.html'
             }})
-        
+
         return self.get_bucket_url(bucket)
 
     def get_local_path(self, path, root, s3_bucket):
@@ -169,8 +175,9 @@ class BucketManager:
         return
 
     def upload_file(self, s3_bucket, path, key):
-        print('\tUploading {0} with key {1} to {2}'.format(
-            path, key, s3_bucket))
+        """Upload local file to S3 Bucket"""
+        print("\t📄    ✅    " + key + (" " * (90 - len(key))) + "📄\n")
+
         content_type = mimetypes.guess_type(key)[0] or 'text/plain'
         s3_bucket.upload_file(
             path,
@@ -182,13 +189,21 @@ class BucketManager:
 
     def sync_path(self, pathname, bucket_name, delete):
         """Synchronize Local Path to S3 Bucket"""
+        print("\t" + ("📄    "*21)+"\n")
+        msg = "Will Syncronize Local Folder to S3 Bucket"
+        print("\t📄" + (" " * (floor((99-len(msg))/2))) +
+              msg + (" " * (ceil((99-len(msg))/2))) + "📄\n")
+
         path = Path(pathname).expanduser().resolve()
+        msg = str(path)
+        print("\t📄" + (" " * (floor((99-len(msg))/2))) +
+              msg + (" " * (ceil((99-len(msg))/2))) + "📄\n")
         s3_bucket = self.init_bucket(bucket_name)
+        msg = s3_bucket.name
+        print("\t📄" + (" " * (floor((99-len(msg))/2))) +
+              msg + (" " * (ceil((99-len(msg))/2))) + "📄\n")
         self.load_manifest(s3_bucket)
         self.get_local_path(path, path, s3_bucket)
-
-        # print(self.manifest)
-        # print(self.local_manifest)
 
         for f in self.local_manifest.items():
             do_upload = False
@@ -204,24 +219,29 @@ class BucketManager:
             del_obj = []
             for f in self.manifest.items():
                 if f[0] not in self.local_manifest:
-                    print("\tWe will delete {0}".format(f[0]))
+                    print("\t📄    ❌    " + f[0] +
+                          (" " * (90 - len(f[0]))) + "📄\n")
+                    # print("\tWe will delete {0}".format(f[0]))
                     del_obj.append({"Key": f[0]})
 
             if del_obj:
                 self.delete_manifest = {"Objects": del_obj}
                 s3_bucket.delete_objects(Delete=self.delete_manifest)
 
+        print("\t" + ("📄    "*21))
+        return
+
     def delete_bucket(self, bucket_name, domain_manager, pattern_match=False):
         """Empties Bucket and Deletes It"""
         buckets = []
-       
+
         buckets = self.find_bucket(bucket_name, pattern_match)
         if not buckets:
             print("\t\tNo Buckets found to delete")
         for b in buckets:
             if b.name in util.protected_buckets:
                 print("\t\t{0}\n\t\t💀  Will not delete protected bucket {1} 💀\n\t\t{2}".format('='*(len(b.name)+39),
-                                                                                          b.name, '='*(len(b.name)+39)))
+                                                                                               b.name, '='*(len(b.name)+39)))
             else:
                 hasObj = bool(len(list(b.objects.all().limit(1))))
                 if hasObj:
@@ -240,13 +260,11 @@ class BucketManager:
                     print('\t\tWe need to delete the DNS')
                     zone = domain_manager.get_hosted_zone(
                         ".".join(b.name.split('.')[-2:]))
-                    
+
                     response = domain_manager.delete_s3_domain_record(
                         b, zone)['ResponseMetadata']['HTTPStatusCode']
                     if response == 200:
                         print('\t\t\tDNS deleted sucessfully')
-
-                    
 
                 except ClientError as e:
                     if e.response['Error']['Code'] == "NoSuchWebsiteConfiguration":
