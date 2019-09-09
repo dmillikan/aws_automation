@@ -10,6 +10,7 @@ ipython = "*"
 boto32 = "*"
 boto3 = "*"
 pylint = "*"
+requests = "*"
 
 [requires]
 python_version = "3.7"
