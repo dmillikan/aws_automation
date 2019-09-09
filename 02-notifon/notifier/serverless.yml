@@ -23,10 +23,12 @@ provider:
   name: aws
   runtime: python3.7
   region: us-east-1
-  profile: automation
+  profile: ${file(../config.${self:provider.stage}.json):notifier.profile}
+  environment:
+    SLACK_WEBHOOK_URL: ${file(../config.${self:provider.stage}.json):notifier.slack_webhook_url}
 
 # you can overwrite defaults here
-#  stage: dev
+  stage: dev
 #  region: us-east-1
 
 # you can add statements to the Lambda function's IAM Role here
@@ -59,8 +61,8 @@ provider:
 #    - exclude-me-dir/**
 
 functions:
-  hello:
-    handler: handler.hello
+  post-to-slack:
+    handler: handler.post_to_slack
     events:
       - cloudwatchEvent:
           event:
