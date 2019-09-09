@@ -107,6 +107,4 @@ venv.bak/
 /webotron/website
 
 # pem
-python_automation_key.pem
 *.pem
-notifon.pem

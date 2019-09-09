@@ -2,8 +2,6 @@ import boto3
 import os
 import stat
 from botocore.exceptions import ClientError
-from math import floor
-from math import ceil
 from random import choices as choices
 from ipaddress import ip_network
 from ipaddress import ip_address
