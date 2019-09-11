@@ -27,6 +27,13 @@ provider:
         Fn::GetAtt:
           - RekognitionSNSPublishRole
           - Arn
+    - Effect: 'Allow'
+      Action: 
+        - dynamodb:PutItem
+      Resource:
+        - Fn::GetAtt:
+          - VideosTable
+          - Arn
 
   environment:
     REKOGNITION_SNS_TOPIC_ARN: ${self:custom.snsTopicArn}    
@@ -34,6 +41,8 @@ provider:
         Fn::GetAtt:
           - RekognitionSNSPublishRole
           - Arn
+    VIDEOS_TABLE_NAME: ${self:custom.videosTableName}
+
 
 custom:
   snsTopicArn:
@@ -53,7 +62,8 @@ custom:
           - s3
           - ''
           - ''
-          - ${file(../config.${self:provider.stage}.json):videolyzer.videos_bucket}         
+          - ${file(../config.${self:provider.stage}.json):videolyzer.videos_bucket}        
+  videosTableName: ${file(../config.${self:provider.stage}.json):videolyzer.videos_table} 
   
 
 functions:
@@ -73,6 +83,21 @@ functions:
 
 resources:
   Resources:
+    VideosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: videoName
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: videoName
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.videosTableName}
     RekognitionSNSPublishRole:
       Type: AWS::IAM::Role
       Properties:
@@ -94,6 +119,7 @@ resources:
                   Action:
                     - sns:Publish
                   Resource: ${self:custom.snsTopicArn} 
+    
           
 
           
