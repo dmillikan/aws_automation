@@ -18,17 +18,15 @@ def get_video_labels(job_id):
     return response
 
 
-def put_lables_in_db(data, video_name, video_lables):
-    # dynamodb = boto3.client('dynamodb')
-
-    # # dynamodb.put_item(
-    # # Item={}
-
-    # # )
+def put_lables_in_db(data, video_name, video_bucket):
+    del data['ResponseMetadata']
+    del data['JobStatus']
+    dynamodb = boto3.client('dynamodb')
+    table_name = os.environ['VIDEOS_TABLE_NAME']
     
+    dynamodb.put_item(TableName=table_name, Item=data)
     
-    # return
-    pass
+    return
 
 
 def start_label_detection(bucket, key):
@@ -70,9 +68,8 @@ def handle_label_detection(event,context):
         s3_bucket = message['Video']['S3Bucket']
         s3_object = message['Video']['S3ObjectName']
 
-
         response = get_video_labels(job_id)
-        print(response)
+      
         put_lables_in_db(response, s3_object, s3_bucket)
 
     return
